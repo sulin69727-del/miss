@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>咖啡電商購物車提醒 LINE 小工具</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            coffee: {
+              50: '#FDFBF7',
+              100: '#FAF6F0',
+              200: '#EADBC8',
+              300: '#DAC0A3',
+              400: '#8B5A2B',
+              500: '#5C4033',
+              600: '#3E2723',
+            },
+            peach: {
+              50: '#FFF7F5',
+              100: '#FFEBE5',
+              200: '#FFD1C4',
+              300: '#FFAFA1',
+              400: '#E79A82',
+              500: '#D5836C',
+              600: '#BA6650',
+            }
+          },
+          fontFamily: {
+            sans: ['Noto Sans TC', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #FAF6F0;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #DAC0A3;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #8B5A2B;
+    }
+  </style>
+</head>
+<body class="bg-coffee-100 font-sans min-h-screen text-coffee-600 flex flex-col antialiased">
+
+  <!-- Header Section -->
+  <header class="bg-white border-b border-coffee-200 py-6 px-4 md:px-8 shadow-sm">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-4">
+        <div class="bg-peach-400 p-3 rounded-2xl text-white shadow-md shadow-peach-200">
+          <i class="fa-solid fa-mug-hot text-2xl"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl md:text-3xl font-extrabold text-coffee-600 tracking-wide flex items-center gap-2">
+            咖啡電商購物車提醒 LINE 小工具
+          </h1>
+          <p class="text-sm md:text-base text-coffee-400 font-medium">用 AI 快速產生未結帳提醒訊息 &middot; 咖啡品牌專用</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 bg-peach-50 px-4 py-2 rounded-full border border-peach-200">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span class="text-xs font-semibold text-peach-600">互動式原型 </span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 md:px-8 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+    
+    <!-- Left Panel: Configuration (8 cols) -->
+    <div class="lg:col-span-7 flex flex-col gap-6">
+      
+      <!-- Section 1: 商品選擇區 -->
+      <section class="bg-white p-6 rounded-2xl shadow-sm border border-coffee-200">
+        <h2 class="text-lg font-bold text-coffee-600 flex items-center gap-2 mb-4">
+          <span class="w-1.5 h-6 bg-peach-400 rounded-full"></span>
+          一、商品選擇區
+        </h2>
+        
+        <div class="mb-4">
+          <label for="productSelect" class="block text-sm font-semibold text-coffee-500 mb-2">請選擇購物車中的商品</label>
+          <div class="relative">
+            <select id="productSelect" onchange="onProductChange()" class="w-full bg-coffee-50 border border-coffee-300 rounded-xl px-4 py-3 text-coffee-600 font-medium focus:ring-2 focus:ring-peach-400 focus:border-peach-400 focus:outline-none appearance-none cursor-pointer">
+              <!-- Dynamically populated -->
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-coffee-400">
+              <i class="fa-solid fa-chevron-down"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Product Summary Card -->
+        <div id="productCard" class="bg-coffee-100 rounded-xl p-5 border border-coffee-200 space-y-4 transition-all duration-300">
+          <div class="flex justify-between items-start gap-2 border-b border-coffee-200 pb-3">
+            <h3 id="cardProdName" class="text-md font-bold text-coffee-600 flex items-center gap-2">
+              <i class="fa-solid fa-circle-info text-peach-400"></i> 加載中...
+            </h3>
+            <span id="cardProdPrice" class="bg-peach-400 text-white font-bold px-3 py-1 rounded-full text-sm">--</span>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <p class="text-xs font-bold text-coffee-400 uppercase tracking-wider mb-0.5">✨ 商品特色</p>
+              <p id="cardProdFeatures" class="text-coffee-600 font-medium leading-relaxed">--</p>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-coffee-400 uppercase tracking-wider mb-0.5">🎁 優惠條件</p>
+              <p id="cardProdOffer" class="text-peach-600 font-bold leading-relaxed">--</p>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs border-t border-coffee-200 pt-3 text-coffee-500">
+            <div>
+              <span class="font-bold block text-coffee-400"><i class="fa-solid fa-truck"></i> 配送說明</span>
+              <span id="cardProdDelivery">--</span>
+            </div>
+            <div>
+              <span class="font-bold block text-coffee-400"><i class="fa-solid fa-box-archive"></i> 保存方式</span>
+              <span id="cardProdStorage">--</span>
+            </div>
+            <div>
+              <span class="font-bold block text-coffee-400"><i class="fa-solid fa-heart"></i> 品牌語氣</span>
+              <span id="cardProdTone" class="italic">--</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section 2: 顧客狀態設定區 -->
+      <section class="bg-white p-6 rounded-2xl shadow-sm border border-coffee-200">
+        <h2 class="text-lg font-bold text-coffee-600 flex items-center gap-2 mb-4">
+          <span class="w-1.5 h-6 bg-peach-400 rounded-full"></span>
+          二、顧客狀態設定區
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Customer Name -->
+          <div>
+            <label for="customerName" class="block text-sm font-semibold text-coffee-500 mb-1.5">顧客稱呼</label>
+            <input type="text" id="customerName" placeholder="例如：王小姐、陳先生" class="w-full bg-coffee-50 border border-coffee-300 rounded-xl px-4 py-2.5 text-coffee-600 focus:ring-2 focus:ring-peach-400 focus:outline-none placeholder-coffee-300">
+            <span class="text-xs text-coffee-400 block mt-1">若未填寫，訊息預設使用「您好」</span>
+          </div>
+
+          <!-- Time in Cart -->
+          <div>
+            <label for="timeInCart" class="block text-sm font-semibold text-coffee-500 mb-1.5">未結帳時間</label>
+            <select id="timeInCart" onchange="onConfigChange()" class="w-full bg-coffee-50 border border-coffee-300 rounded-xl px-4 py-2.5 text-coffee-600 focus:ring-2 focus:ring-peach-400 focus:outline-none">
+              <option value="30m">⏰ 30 分鐘 (溫和提醒/不提優惠)</option>
+              <option value="3h" selected>☕ 3 小時 (強化特色與風味)</option>
+              <option value="24h">✨ 24 小時 (帶入官方限定優惠)</option>
+              <option value="48h">🌿 48 小時 (最後關懷與諮詢)</option>
+            </select>
+          </div>
+
+          <!-- Message Type Hint -->
+          <div>
+            <label class="block text-sm font-semibold text-coffee-500 mb-1.5">LINE 訊息主要訴求</label>
+            <select id="messageType" onchange="onConfigChange()" class="w-full bg-coffee-50 border border-coffee-300 rounded-xl px-4 py-2.5 text-coffee-600 focus:ring-2 focus:ring-peach-400 focus:outline-none">
+              <option value="gentle">溫和提醒 (溫柔日常關懷)</option>
+              <option value="feature" selected>商品特色提醒 (深耕風味與沖煮)</option>
+              <option value="promo">優惠提醒 (主打免運、折扣細節)</option>
+              <option value="faq">FAQ 解答型 (主動破除猶豫心防)</option>
+              <option value="final">最後提醒 (不打擾的主動協助)</option>
+            </select>
+          </div>
+
+          <!-- CTA Button Text -->
+          <div>
+            <label for="ctaText" class="block text-sm font-semibold text-coffee-500 mb-1.5">CTA 按鈕文字</label>
+            <select id="ctaText" onchange="onConfigChange()" class="w-full bg-coffee-50 border border-coffee-300 rounded-xl px-4 py-2.5 text-coffee-600 focus:ring-2 focus:ring-peach-400 focus:outline-none">
+              <option value="回到購物車" selected>🛒 回到購物車</option>
+              <option value="立即結帳">👉 立即結帳</option>
+              <option value="查看商品">☕ 查看商品詳情</option>
+              <option value="詢問客服">💬 諮詢線上咖啡師</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="mt-6 flex flex-wrap gap-6 items-center border-t border-coffee-100 pt-4">
+          <!-- Emoji Switch -->
+          <div class="flex items-center gap-3">
+            <span class="text-sm font-semibold text-coffee-500">是否加入 Emoji 表情符號：</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="useEmoji" checked onchange="onConfigChange()" class="sr-only peer">
+              <div class="w-11 h-6 bg-coffee-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-peach-400"></div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Trigger Buttons -->
+        <div class="mt-6 flex flex-wrap gap-3">
+          <button onclick="generateMessages()" class="flex-1 min-w-[150px] bg-peach-400 hover:bg-peach-500 active:scale-95 text-white font-bold py-3 px-6 rounded-xl shadow-md shadow-peach-100 transition duration-150 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> 產生 LINE 訊息
+          </button>
+          <button onclick="resetConfigs()" class="bg-coffee-100 hover:bg-coffee-200 active:scale-95 text-coffee-500 font-bold py-3 px-6 rounded-xl transition duration-150 flex items-center gap-2">
+            <i class="fa-solid fa-rotate-left"></i> 重新設定
+          </button>
+        </div>
+      </section>
+
+      <!-- Section 3: LINE 訊息產生區 -->
+      <section class="bg-white p-6 rounded-2xl shadow-sm border border-coffee-200 flex-grow">
+        <h2 class="text-lg font-bold text-coffee-600 flex items-center gap-2 mb-4">
+          <span class="w-1.5 h-6 bg-peach-400 rounded-full"></span>
+          三、LINE 訊息產生區
+        </h2>
+
+        <!-- Tab Controls -->
+        <div class="flex border-b border-coffee-200 mb-6 gap-2">
+          <button onclick="switchTab('brief')" id="tab-brief" class="tab-btn py-2.5 px-4 font-bold text-sm border-b-2 transition duration-200 flex items-center gap-2 focus:outline-none">
+            <i class="fa-solid fa-comment-sms"></i> 1. 簡短版 <span class="bg-coffee-100 text-coffee-500 text-[10px] px-1.5 py-0.5 rounded-full" id="len-brief">0 字</span>
+          </button>
+          <button onclick="switchTab('standard')" id="tab-standard" class="tab-btn py-2.5 px-4 font-bold text-sm border-b-2 transition duration-200 flex items-center gap-2 focus:outline-none">
+            <i class="fa-solid fa-comments"></i> 2. 標準版 <span class="bg-coffee-100 text-coffee-500 text-[10px] px-1.5 py-0.5 rounded-full" id="len-standard">0 字</span>
+          </button>
+          <button onclick="switchTab('faq')" id="tab-faq" class="tab-btn py-2.5 px-4 font-bold text-sm border-b-2 transition duration-200 flex items-center gap-2 focus:outline-none">
+            <i class="fa-solid fa-circle-question"></i> 3. FAQ 輔助版 <span class="bg-coffee-100 text-coffee-500 text-[10px] px-1.5 py-0.5 rounded-full" id="len-faq">0 字</span>
+          </button>
+        </div>
+
+        <!-- Output Display Panel -->
+        <div class="space-y-4">
+          <!-- Text Box -->
+          <div class="relative">
+            <textarea id="outputArea" readonly class="w-full bg-coffee-50 border border-coffee-200 rounded-2xl p-4 text-coffee-600 font-medium text-sm leading-relaxed focus:outline-none focus:ring-0" rows="6" style="resize:none;"></textarea>
+            <div id="emptyState" class="absolute inset-0 bg-coffee-50 flex flex-col items-center justify-center text-coffee-400 gap-2 rounded-2xl">
+              <i class="fa-solid fa-wand-magic text-2xl animate-pulse"></i>
+              <span class="text-sm">點選上方「產生 LINE 訊息」按鈕以生成文案</span>
+            </div>
+          </div>
+
+          <!-- Scenario & CTA indicators -->
+          <div class="flex flex-wrap items-center justify-between text-xs font-semibold gap-3 px-1 text-coffee-400">
+            <div>
+              <span class="text-peach-500"><i class="fa-solid fa-bullseye"></i> 適用情境：</span>
+              <span id="tabScenario" class="text-coffee-500">尚未產生訊息</span>
+            </div>
+            <div>
+              <span class="text-coffee-400"><i class="fa-solid fa-arrow-pointer"></i> CTA 設定：</span>
+              <span id="tabCtaLabel" class="text-coffee-500 font-bold bg-coffee-200 px-2.5 py-1 rounded-full text-[11px]">無</span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex flex-wrap gap-2 pt-2 border-t border-coffee-100">
+            <button onclick="copyCurrentTab()" id="btnCopyTab" disabled class="flex-1 min-w-[120px] bg-coffee-600 hover:bg-coffee-700 active:scale-95 text-white text-xs font-bold py-2.5 px-4 rounded-xl transition duration-150 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+              <i class="fa-regular fa-copy"></i> 複製目前版本
+            </button>
+            <button onclick="copyAll()" id="btnCopyAll" disabled class="bg-coffee-100 hover:bg-coffee-200 active:scale-95 text-coffee-500 text-xs font-bold py-2.5 px-4 rounded-xl transition duration-150 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+              <i class="fa-solid fa-copy"></i> 複製全部三版
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Right Panel: Smartphone Simulator (5 cols) -->
+    <div class="lg:col-span-5 flex flex-col items-center justify-start">
+      
+      <!-- Smartphone Simulator Container -->
+      <div class="sticky top-6 w-full max-w-[360px] bg-white rounded-[45px] p-4 border-[10px] border-coffee-600 shadow-2xl relative">
+        <!-- Ear speaker & Camera -->
+        <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-6 bg-coffee-600 rounded-b-2xl z-10 flex justify-center items-start pt-1">
+          <div class="w-12 h-1 bg-coffee-500 rounded-full mb-1"></div>
+        </div>
+        
+        <!-- Screen Content Area -->
+        <div class="w-full bg-[#849BB4] rounded-[32px] overflow-hidden flex flex-col h-[600px] relative">
+          
+          <!-- LINE Status Bar -->
+          <div class="bg-black/15 text-white px-6 py-2 flex justify-between items-center text-[10px] z-10 pt-3">
+            <span>BeanCraft LINE</span>
+            <div class="flex items-center gap-1.5">
+              <i class="fa-solid fa-wifi"></i>
+              <span>LTE</span>
+              <i class="fa-solid fa-battery-three-quarters"></i>
+            </div>
+          </div>
+
+          <!-- LINE Room Header -->
+          <div class="bg-[#1e1e1e]/20 backdrop-blur-sm border-b border-white/5 py-2.5 px-4 flex items-center justify-between text-white">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-chevron-left text-sm cursor-pointer"></i>
+              <div class="w-8 h-8 rounded-full bg-peach-300 flex items-center justify-center text-white text-xs font-bold shadow-inner">
+                BC
+              </div>
+              <div>
+                <h4 class="font-bold text-xs tracking-wide">BeanCraft Coffee</h4>
+                <div class="flex items-center gap-1 text-[9px] text-emerald-400">
+                  <span class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span> 官方帳號
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 text-xs opacity-85">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <i class="fa-solid fa-phone"></i>
+              <i class="fa-solid fa-bars"></i>
+            </div>
+          </div>
+
+          <!-- Chat Window Body (Scrollable) -->
+          <div class="flex-grow p-4 space-y-4 overflow-y-auto text-xs" id="chatContainer">
+            <!-- Simulated Time divider -->
+            <div class="text-center">
+              <span class="bg-black/10 text-white text-[9px] px-2.5 py-0.5 rounded-full tracking-wider" id="chatTimeDivider">TODAY</span>
+            </div>
+
+            <!-- Inbound simulated message from Customer -->
+            <div class="flex gap-2 items-start max-w-[85%]">
+              <div class="w-6 h-6 rounded-full bg-coffee-200 text-coffee-600 flex items-center justify-center text-[9px] font-bold flex-shrink-0">
+                ME
+              </div>
+              <div class="bg-white text-coffee-600 rounded-2xl rounded-tl-sm p-2.5 shadow-sm leading-relaxed">
+                我剛剛逛了你們網站，有些想買的東西...
+              </div>
+            </div>
+
+            <!-- Official Account Message Box (Generated Reminder) -->
+            <div class="flex gap-2 items-start max-w-[85%] flex-row-reverse self-end ml-auto" id="linePreviewBubbleBox">
+              <!-- Content filled dynamically -->
+            </div>
+
+          </div>
+
+          <!-- Chat Input Bar -->
+          <div class="bg-white p-3 border-t border-coffee-200 flex items-center gap-2 text-xs">
+            <i class="fa-regular fa-face-smile text-coffee-400 text-lg cursor-pointer"></i>
+            <i class="fa-solid fa-plus text-coffee-400 text-lg cursor-pointer"></i>
+            <div class="flex-grow bg-coffee-100 rounded-full px-3 py-1.5 text-coffee-300 text-[11px] border border-coffee-200">
+              輸入訊息...
+            </div>
+            <div class="bg-peach-400 hover:bg-peach-500 text-white p-1.5 rounded-full flex items-center justify-center cursor-pointer shadow-sm shadow-peach-100">
+              <i class="fa-solid fa-paper-plane text-[10px]"></i>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Phone Home Button Indicator -->
+        <div class="absolute bottom-2.5 left-1/2 transform -translate-x-1/2 w-28 h-1 bg-coffee-600 rounded-full"></div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Educational Section -->
+  <footer class="bg-coffee-600 text-coffee-200 py-12 px-4 md:px-8 mt-12 border-t-4 border-peach-400">
+    <div class="max-w-7xl mx-auto">
+      <h3 class="text-xl font-bold text-white flex items-center gap-2 mb-6">
+        <i class="fa-solid fa-circle-info text-peach-300"></i> 這個 LINE 小工具如何協助咖啡電商？
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
+        
+        <div class="bg-coffee-500/50 p-5 rounded-xl border border-coffee-400/40 hover:border-peach-400/50 transition-all">
+          <div class="flex items-center gap-3 mb-2">
+            <span class="w-7 h-7 bg-peach-400 text-white rounded-lg flex items-center justify-center font-bold">1</span>
+            <h4 class="font-bold text-white">將產品特色轉為 LINE 素材</h4>
+          </div>
+          <p class="text-coffee-200 leading-relaxed text-xs">
+            將艱澀或純條列的咖啡商品資料（風味、酸度、保存、出貨說明），轉換為生動且適合社群、即時通訊發送的高品質提醒文案。
+          </p>
+        </div>
+
+        <div class="bg-coffee-500/50 p-5 rounded-xl border border-coffee-400/40 hover:border-peach-400/50 transition-all">
+          <div class="flex items-center gap-3 mb-2">
+            <span class="w-7 h-7 bg-peach-400 text-white rounded-lg flex items-center justify-center font-bold">2</span>
+            <h4 class="font-bold text-white">隨「未結帳時間」調整語氣</h4>
+          </div>
+          <p class="text-coffee-200 leading-relaxed text-xs">
+            結合黃金時間行銷理論：30 分鐘防漏單，3 小時重風味特色引發品嚐渴望，24 小時祭出免運或商品折扣，48 小時進入客服關懷排除疑慮。
+          </p>
+        </div>
+
+        <div class="bg-coffee-500/50 p-5 rounded-xl border border-coffee-400/40 hover:border-peach-400/50 transition-all">
+          <div class="flex items-center gap-3 mb-2">
+            <span class="w-7 h-7 bg-peach-400 text-white rounded-lg flex items-center justify-center font-bold">3</span>
+            <h4 class="font-bold text-white">整合 FAQ，降低顧客選購阻力</h4>
+          </div>
+          <p class="text-coffee-200 leading-relaxed text-xs">
+            「怕太酸、不知怎麼沖、沒工具」是咖啡愛好者最常中途放棄的瓶頸，主動融入商品專屬 FAQ 解答，最快突破猶豫心防。
+          </p>
+        </div>
+
+        <div class="bg-coffee-500/50 p-5 rounded-xl border border-coffee-400/40 hover:border-peach-400/50 transition-all">
+          <div class="flex items-center gap-3 mb-2">
+            <span class="w-7 h-7 bg-peach-400 text-white rounded-lg flex items-center justify-center font-bold">4</span>
+            <h4 class="font-bold text-white">快速產出一致的高質感語氣</h4>
+          </div>
+          <p class="text-coffee-200 leading-relaxed text-xs">
+            無論是「輕鬆生活化」或「精緻限定感」，均嚴格按照不同品項的官方「品牌語氣」生成，確保多名客服在不同線路均有一致溫度。
+          </p>
+        </div>
+
+        <div class="bg-coffee-500/50 p-5 rounded-xl border border-coffee-400/40 hover:border-peach-400/50 transition-all">
+          <div class="flex items-center gap-3 mb-2">
+            <span class="w-7 h-7 bg-peach-400 text-white rounded-lg flex items-center justify-center font-bold">5</span>
+            <h4 class="font-bold text-white">杜絕虛假，保障品牌誠信</h4>
+          </div>
+          <p class="text-coffee-200 leading-relaxed text-xs">
+            系統杜絕 AI 常見的幻覺：絕不編造折扣、誇大到貨時間或捏造庫存，忠於商品說明書，避免過度行銷，維護品牌信任感。
+          </p>
+        </div>
+
+        <div class="bg-coffee-500/50 p-5 rounded-xl border border-coffee-400/40 hover:border-peach-400/50 transition-all flex items-center justify-center bg-gradient-to-br from-coffee-500 to-coffee-600">
+          <div class="text-center">
+            <p class="text-xs text-peach-300 font-bold mb-1">BeanCraft Co. 關心您的行銷成效</p>
+            <p class="text-[11px] text-coffee-300">本小工具適合用作行銷培訓與內部流程梳理之教具</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </footer>
+
+  <!-- Toast Notification System -->
+  <div id="toast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-coffee-600 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 text-xs font-semibold opacity-0 pointer-events-none transition-all duration-300 z-50">
+    <i class="fa-solid fa-circle-check text-peach-300 text-sm"></i>
+    <span id="toastText">訊息已複製！</span>
+  </div>
+
+  <!-- JavaScript Logic Area -->
+  <script>
+    // 內建 Word 商品資料集
+    const productsData = [
+      {
+        id: 1,
+        name: "中深焙經典配方咖啡豆",
+        features: "低酸、堅果香、黑巧克力尾韻；適合日常黑咖啡與拿鐵",
+        price: "NT$450 / 半磅",
+        offer: "滿 999 免運；限時 9 折",
+        delivery: "2–3 個工作天出貨",
+        storage: "開封後建議 2–4 週內飲用",
+        faqs: [
+          { q: "酸不酸？", a: "經典配方主打溫和低酸，擁有醇厚黑巧克力尾韻與堅果甜香，不愛酸度的朋友一定會愛上！" },
+          { q: "適合新手嗎？", a: "非常適合新手日常飲用！手沖或搭配鮮奶作拿鐵都極不容易出錯，極佳的沖煮容錯率。" },
+          { q: "可以做冰咖啡嗎？", a: "當然可以！極具厚實感的酒質風味極適合做成冰釀或冰滴，風味非常清爽扎實！" }
+        ],
+        tone: "親切、專業、不過度推銷"
+      },
+      {
+        id: 2,
+        name: "淺焙衣索比亞日曬咖啡豆",
+        features: "莓果香、花香、明亮果酸；適合喜歡層次感的顧客",
+        price: "NT$580 / 半磅",
+        offer: "第二件 95 折；會員點數 2 倍",
+        delivery: "接單後烘焙，約 3–5 個工作天出貨",
+        storage: "未開封 3 個月；開封後 2–3 週內飲用",
+        faqs: [
+          { q: "會不會太酸？", a: "此款為淺焙，果酸屬於溫和明亮的調性，有著細緻的莓果與花香，是喜歡層次香氣者絕佳享受！" },
+          { q: "適合手沖嗎？", a: "極力推薦手沖！手沖最能完美展現日曬處理法特有的清新水果香氣與花香層次。" },
+          { q: "研磨度怎麼選？", a: "建議選擇中等研磨度（約如細砂糖狀），水溫控制在 90℃–92℃，能帶出最佳水果風味。" }
+        ],
+        tone: "專業、清楚、引導式推薦"
+      },
+      {
+        id: 3,
+        name: "深焙義式拿鐵專用咖啡豆",
+        features: "濃郁可可、焦糖苦甜、厚實油脂感；適合牛奶飲品",
+        price: "NT$420 / 半磅",
+        offer: "滿 2 包折 NT$80；滿額免運",
+        delivery: "2–3 個工作天出貨",
+        storage: "避免高溫潮濕；開封後請密封保存",
+        faqs: [
+          { q: "適合義式機嗎？", a: "非常合適！深焙特色是能淬出豐沛厚實的Crema(油脂)，完美對接家用或專業義式咖啡機。" },
+          { q: "加牛奶會不會被蓋過風味？", a: "完全不用擔心！濃醇的可可焦糖苦甜味能跟鮮奶完美融合，調成拿鐵後依舊咖啡香氣四溢。" }
+        ],
+        tone: "直接、穩定、強調適用情境"
+      },
+      {
+        id: 4,
+        name: "冰釀冷萃濾掛咖啡包",
+        features: "低苦感、清爽、適合冷泡；單包即沖即飲",
+        price: "NT$360 / 10 入",
+        offer: "夏季限定 88 折；買 2 盒免運",
+        delivery: "1–2 個工作天出貨",
+        storage: "常溫陰涼保存；開封後請儘速使用",
+        faqs: [
+          { q: "可以冷泡多久？", a: "放冰箱冷藏靜置 8 至 12 小時是最經典風味，口感如威士忌般圓潤，不要浸泡超過 24 小時哦！" },
+          { q: "需要熱水嗎？", a: "不需要，直接用常溫水或冰水浸泡即可。專為冷萃愛好者設計的超級便利包！" },
+          { q: "一包可以泡多少水？", a: "建議一包加入約 150ml - 180ml 的水，可依個人對濃度的喜好調整水量大小。" }
+        ],
+        tone: "輕鬆、清爽、生活化"
+      },
+      {
+        id: 5,
+        name: "掛耳綜合體驗組",
+        features: "一次體驗淺焙、中焙、深焙；適合選味道與送禮",
+        price: "NT$399 / 12 入",
+        offer: "新客首購折 NT$50；滿 888 免運",
+        delivery: "2–3 個工作天出貨",
+        storage: "單包獨立包裝，避免陽光直射",
+        faqs: [
+          { q: "不知道要選哪款怎麼辦？", a: "這款綜合組是為您量身打造的！一次收錄了從淺焙果香到深焙醇厚的經典口味，喝過就知道最愛哪款！" },
+          { q: "可以送禮嗎？", a: "當然可以！它有著精緻的單包獨立防潮包裝，不論是辦公室分享或是送禮都很合適、大方！" }
+        ],
+        tone: "親切、降低選擇壓力"
+      },
+      {
+        id: 6,
+        name: "無咖啡因哥倫比亞咖啡豆",
+        features: "低咖啡因、焦糖甜感、柔和堅果調；適合晚間飲用",
+        price: "NT$520 / 半磅",
+        offer: "會員專屬 95 折；滿 999 免運",
+        delivery: "3–4 個工作天出貨",
+        storage: "開封後建議 2–4 週內飲用",
+        faqs: [
+          { q: "真的沒有咖啡因嗎？", a: "這款豆子採用天然安全工藝去除 97% 以上咖啡因，保留完美咖啡風味，非化學溶劑去除，更安心！" },
+          { q: "孕婦可以喝嗎？", a: "此產品極度溫和、低刺激。不過，出於孕期各階段體質差異，若有特別疑慮建議先諮詢專業醫師意見。" },
+          { q: "晚上喝會睡不著嗎？", a: "絕大多數敏感體質顧客回饋，在晚上享用此款低因咖啡，依舊能放鬆入眠，暖暖的完全無負擔。" }
+        ],
+        tone: "謹慎、清楚、不做醫療承諾"
+      },
+      {
+        id: 7,
+        name: "精品咖啡新手入門禮盒",
+        features: "含咖啡豆、濾掛包與沖煮小卡；適合第一次購買",
+        price: "NT$899 / 組",
+        offer: "贈送品牌提袋；滿額免運",
+        delivery: "3–5 個工作天出貨",
+        storage: "禮盒置於陰涼處；咖啡豆開封後密封保存",
+        faqs: [
+          { q: "新手需要買磨豆機嗎？", a: "我們為您貼心考量！若您沒有磨豆機，禮盒中也有附帶即沖即飲的濾掛包，並提供貼心的風味小卡引導！" },
+          { q: "禮盒內容有哪些？", a: "精巧包含了精選咖啡豆一包、多口味濾掛包體驗組、專屬品牌高質感提袋，以及超詳盡的新手入門沖煮指南。" }
+        ],
+        tone: "溫和、教學型、降低門檻"
+      },
+      {
+        id: 8,
+        name: "辦公室大包量咖啡豆",
+        features: "穩定中焙、接受度高、適合多人共用與美式咖啡機",
+        price: "NT$1,280 / 1 公斤",
+        offer: "企業採購滿 3 包另享優惠",
+        delivery: "2–4 個工作天出貨",
+        storage: "建議分裝密封；避免頻繁開合大包裝",
+        faqs: [
+          { q: "適合辦公室機器嗎？", a: "非常適合！中焙經典風味接受度高、油脂穩定，不論是商用全自動機或美式咖啡機都能展現細緻品質。" },
+          { q: "一公斤可以喝多久？", a: "一公斤約可沖煮 50-60 杯精緻咖啡（單杯 15g 計算）。適合 5-10 人團隊維持一個月的新鮮香氣。" }
+        ],
+        tone: "專業、效率導向、重視穩定"
+      },
+      {
+        id: 9,
+        name: "季節限定果香配方咖啡豆",
+        features: "柑橘、蜂蜜、茶感尾韻；適合喜歡清爽風味者",
+        price: "NT$620 / 半磅",
+        offer: "限量批次；滿 999 免運",
+        delivery: "接單後依批次出貨，約 3–5 個工作天",
+        storage: "建議於最佳賞味期內飲用；開封後密封",
+        faqs: [
+          { q: "會很酸嗎？", a: "果酸是精緻成熟的酸度，口感偏像酸甜的水果柑橘，最後伴隨如蜂蜜與茶香的甘甜餘韻，高雅清澈。" },
+          { q: "跟經典配方差在哪？", a: "經典配方走醇厚堅果黑巧克力感，而此限定款是走明亮清新的水果、蜂蜜、輕盈茶香尾韻路线。" },
+          { q: "售完還會補貨嗎？", a: "本款是依當季極限量生豆採購，烘焙售完即止。由於產季限制，若錯過本批次將難以在同季節內重現。" }
+        ],
+        tone: "精緻、限定感、避免過度承諾"
+      },
+      {
+        id: 10,
+        name: "單品手沖咖啡禮盒",
+        features: "三款單品豆組合，附風味卡；適合送禮",
+        price: "NT$1,180 / 組",
+        offer: "節慶預購免運；可加購禮袋",
+        delivery: "節日前建議提早 5–7 個工作天下單",
+        storage: "未開封請陰涼保存；開封後分別密封",
+        faqs: [
+          { q: "可以指定口味嗎？", a: "本禮盒為尋求極致產地風土特選的固定組合，皆包含最經典且個性多元的三款單品豆，以展現手沖的極富層次！" },
+          { q: "可以寫祝福卡嗎？", a: "是的，下單時可於訂單備註留言，我們將提供貼心手寫祝福卡片的代筆服務，幫您傳達最真切的心意。" },
+          { q: "多久會到？", a: "我們約 2-3 天烘培出貨，但因節慶送禮物流吃緊，送禮請務必提早 5–7 個工作天完成訂購最保險喔。" }
+        ],
+        tone: "禮貌、細緻、重視送禮情境"
+      }
+    ];
+
+    // 全域變數
+    let currentTab = 'brief'; // brief, standard, faq
+    let generatedData = {
+      brief: '',
+      standard: '',
+      faq: '',
+      scenarios: { brief: '', standard: '', faq: '' },
+      ctas: { brief: '', standard: '', faq: '' }
+    };
+
+    // 初始化網頁
+    window.onload = function() {
+      populateProductDropdown();
+      onProductChange();
+    }
+
+    // 填充下拉選單
+    function populateProductDropdown() {
+      const select = document.getElementById('productSelect');
+      select.innerHTML = '';
+      productsData.forEach(p => {
+        const option = document.createElement('option');
+        option.value = p.id;
+        option.textContent = `【${p.id}】${p.name} - ${p.price}`;
+        select.appendChild(option);
+      });
+    }
+
+    // 切換商品，更新簡介卡片
+    function onProductChange() {
+      const select = document.getElementById('productSelect');
+      const prodId = parseInt(select.value);
+      const prod = productsData.find(p => p.id === prodId);
+
+      if (!prod) return;
+
+      // 更新卡片內容
+      document.getElementById('cardProdName').innerHTML = `<i class="fa-solid fa-mug-hot text-peach-400"></i> ${prod.name}`;
+      document.getElementById('cardProdPrice').textContent = prod.price;
+      document.getElementById('cardProdFeatures').textContent = prod.features;
+      document.getElementById('cardProdOffer').textContent = prod.offer || "暫無特定優惠";
+      document.getElementById('cardProdDelivery').textContent = prod.delivery;
+      document.getElementById('cardProdStorage').textContent = prod.storage;
+      document.getElementById('cardProdTone').textContent = prod.tone;
+
+      // 動態更新當下設定，自動重產
+      generateMessages();
+    }
+
+    // 設定改變時的 callback
+    function onConfigChange() {
+      generateMessages();
+    }
+
+    // 重設配置
+    function resetConfigs() {
+      document.getElementById('customerName').value = '';
+      document.getElementById('timeInCart').value = '3h';
+      document.getElementById('messageType').value = 'feature';
+      document.getElementById('ctaText').value = '回到購物車';
+      document.getElementById('useEmoji').checked = true;
+      generateMessages();
+      showToast("設定已回復預設值");
+    }
+
+    // 核心生成演算法 (AI 行銷規則引擎)
+    function generateMessages() {
+      const prodId = parseInt(document.getElementById('productSelect').value);
+      const prod = productsData.find(p => p.id === prodId);
+      if (!prod) return;
+
+      const customerRaw = document.getElementById('customerName').value.trim();
+      const name = customerRaw ? `${customerRaw}` : "您好";
+      const timeVal = document.getElementById('timeInCart').value;
+      const msgType = document.getElementById('messageType').value;
+      const ctaVal = document.getElementById('ctaText').value;
+      const emoji = document.getElementById('useEmoji').checked;
+
+      // 裝飾用 emoji
+      const e = {
+        bell: emoji ? "⏰ " : "",
+        coffee: emoji ? "☕ " : "",
+        heart: emoji ? "❤️ " : "",
+        sparkle: emoji ? "✨ " : "",
+        gift: emoji ? "🎁 " : "",
+        check: emoji ? "✅ " : "",
+        truck: emoji ? "📦 " : "",
+        smile: emoji ? "😊 " : "",
+        cart: emoji ? "🛒 " : "",
+        bulb: emoji ? "💡 " : "",
+        question: emoji ? "❓ " : ""
+      };
+
+      // 基礎變數與商品資料
+      const prodName = prod.name;
+      const prodFeatures = prod.features;
+      const prodOffer = prod.offer;
+      const prodDelivery = prod.delivery;
+      const prodFaqs = prod.faqs;
+
+      // --- 1. 簡短版生成邏輯 (< 80字) ---
+      let briefText = "";
+      let briefScenario = "";
+      
+      if (timeVal === '30m') {
+        briefText = `${e.coffee}${name}，您購物車中的【${prodName}】正靜候中。新鮮烘焙的風味最值得期待，等您帶它回家。`;
+        briefScenario = "加購物車後 30 分鐘，快速輕和提醒，維持熱度。";
+      } else if (timeVal === '3h') {
+        briefText = `${e.coffee}${name}，【${prodName}】帶有${prodFeatures.split('；')[0]}。別錯過專屬您的日常咖啡時光！`;
+        briefScenario = "加購物車後 3 小時，主攻咖啡最誘人的特色，加深渴望。";
+      } else if (timeVal === '24h') {
+        briefText = `${e.sparkle}${name}，提醒您購物車中的【${prodName}】享「${prodOffer.split('；')[0]}」。快來把它帶回家吧！`;
+        briefScenario = "加購物車後 24 小時，適度透露商品本身具有的官方優惠。";
+      } else { // 48h
+        briefText = `${e.heart}${name}，貼心提醒您購物車中還有【${prodName}】。若有沖煮研磨疑問，隨時歡迎諮詢！`;
+        briefScenario = "加購物車後 48 小時，用不打擾的語氣，做最後溫和提醒。";
+      }
+
+      // --- 2. 標準版生成邏輯 (120-180字) ---
+      let standardText = "";
+      let standardScenario = "";
+
+      // 依時間調整開頭與核心
+      if (timeVal === '30m') {
+        standardText = `${e.bell}${name}，您好！剛才在忙碌嗎？\n\n您挑選的【${prodName}】還留在購物車中呢。這款咖啡深受喜愛，主打${prodFeatures.split('；')[0]}，非常適合在忙碌之餘給自己一杯純粹的放鬆。\n\n${e.truck}配送說明：${prodDelivery}。點擊下方連結為您快速保留香氣，隨時期待為您烘焙！`;
+        standardScenario = "半小時防漏單。強調及時感、溫和配送提示，不做優惠逼迫。";
+      } else if (timeVal === '3h') {
+        standardText = `${e.coffee}${name}，休息一下，聞杯咖啡香吧！\n\n購物車裡的【${prodName}】擁有「${prodFeatures}」。不論您是新手或是咖啡老饕，這款都能契合您的日常。我們始終堅持新鮮品質，誠摯推薦您親自品嚐。\n\n${e.cart}若您準備好了，點擊下方即可返回購物車輕鬆結帳：`;
+        standardScenario = "3小時渴望建立。聚焦產品特點、風味、沖煮適應度與日常場景。";
+      } else if (timeVal === '24h') {
+        standardText = `${e.gift}${name}，早安/日安！想跟您分享一個好消息：\n\n您購物車中的【${prodName}】目前可享有「${prodOffer}」！好咖啡不用等，讓它陪伴您的每個晨間與午後。\n\n${e.truck}本商品將在${prodDelivery}，點擊下方即可享有當前最完美的咖啡風味方案：`;
+        standardScenario = "24小時黃金挽回期。結合原本商品的免運/折扣，精確不誇大。";
+      } else { // 48h
+        standardText = `${e.heart}${name}，希望沒打擾到您：\n\n您之前挑選的【${prodName}】仍在購物車中。好咖啡值得等待最合適的主人。若您是因對沖煮工具、研磨度或物流有疑問而猶豫，我們非常樂意為您提供細緻解答。\n\n${e.check}若您想繼續完成結帳，可以點擊下方連結。祝您有美好的一天！`;
+        standardScenario = "48小時關懷挽回。完全退居客服助理角色，誠懇貼心，無行銷疲勞。";
+      }
+
+      // --- 3. FAQ 輔助版邏輯 (帶出1-2組FAQ) ---
+      let faqText = "";
+      let faqScenario = "";
+      const faqSelected1 = prodFaqs[0];
+      const faqSelected2 = prodFaqs[1] || prodFaqs[0];
+
+      faqText = `${e.bulb}${name}，在挑選【${prodName}】時是否有些猶豫呢？我們的線上咖啡師特別為您整理了大家的常見疑問：\n\n`;
+      faqText += `${e.question}Q1：${faqSelected1.q}\n${e.check}A：${faqSelected1.a}\n\n`;
+      if (prodFaqs.length > 1) {
+        faqText += `${e.question}Q2：${faqSelected2.q}\n${e.check}A：${faqSelected2.a}\n\n`;
+      }
+      faqText += `希望這些解答能幫您安心做出選擇。點擊下方連結返回購物車，輕鬆開啟專屬您的迷人咖啡香氣！`;
+      faqScenario = "利用大眾常見疑慮（如酸不酸、是否需磨豆機）主動破除心防，特別適合新手商品。";
+
+      // 附加 CTA 按鈕文字至訊息尾端（標準與FAQ版）
+      briefText += `\n\n${e.cart}${ctaVal}`;
+      standardText += `\n\n${e.cart}${ctaVal}`;
+      faqText += `\n\n${e.cart}${ctaVal}`;
+
+      // 儲存生成結果
+      generatedData.brief = briefText;
+      generatedData.standard = standardText;
+      generatedData.faq = faqText;
+
+      generatedData.scenarios.brief = briefScenario;
+      generatedData.scenarios.standard = standardScenario;
+      generatedData.scenarios.faq = faqScenario;
+
+      generatedData.ctas.brief = ctaVal;
+      generatedData.ctas.standard = ctaVal;
+      generatedData.ctas.faq = ctaVal;
+
+      // 隱藏空狀態
+      document.getElementById('emptyState').classList.add('hidden');
+      
+      // 開啟操作按鈕
+      document.getElementById('btnCopyTab').removeAttribute('disabled');
+      document.getElementById('btnCopyAll').removeAttribute('disabled');
+
+      // 更新字數標示
+      document.getElementById('len-brief').textContent = `${briefText.length} 字`;
+      document.getElementById('len-standard').textContent = `${standardText.length} 字`;
+      document.getElementById('len-faq').textContent = `${faqText.length} 字`;
+
+      // 渲染目前 Tab 到文字框與手機預覽區
+      renderCurrentTab();
+    }
+
+    // 渲染當下被選取的 Tab 資料
+    function renderCurrentTab() {
+      const outputArea = document.getElementById('outputArea');
+      const text = generatedData[currentTab];
+      outputArea.value = text;
+
+      // 更新下方情境與 CTA 標籤
+      document.getElementById('tabScenario').textContent = generatedData.scenarios[currentTab];
+      document.getElementById('tabCtaLabel').textContent = generatedData.ctas[currentTab];
+
+      // 更新 Tab 按鈕樣式
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('border-peach-400', 'text-peach-500', 'border-transparent', 'text-coffee-400');
+      });
+
+      const activeBtn = document.getElementById(`tab-${currentTab}`);
+      if (activeBtn) {
+        activeBtn.classList.add('border-peach-400', 'text-peach-500');
+      }
+
+      // 更新手機模擬預覽
+      updatePhonePreview(text, generatedData.ctas[currentTab]);
+    }
+
+    // 更新手機對話模擬
+    function updatePhonePreview(msgText, ctaLabel) {
+      const bubbleContainer = document.getElementById('linePreviewBubbleBox');
+      
+      // 分解訊息（拿掉最後一行的 CTA 作為按鈕展示，讓預覽更有 LINE 模板訊息的真實感）
+      const lines = msgText.split('\n\n');
+      const buttonLabel = ctaLabel;
+      // 組合前方的純文字
+      const bodyText = lines.slice(0, lines.length - 1).join('\n\n');
+
+      bubbleContainer.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-peach-400 flex items-center justify-center text-white text-xs font-bold shadow-inner flex-shrink-0">
+          BC
+        </div>
+        <div class="flex-grow flex flex-col gap-1.5">
+          <div class="text-[10px] text-white/70">BeanCraft Coffee</div>
+          
+          <!-- LINE Template-style message bubble -->
+          <div class="bg-white rounded-2xl rounded-tl-sm shadow-sm overflow-hidden flex flex-col max-w-full">
+            <div class="p-3 text-coffee-600 leading-relaxed whitespace-pre-wrap select-text text-[11px] border-b border-coffee-100">${bodyText}</div>
+            <a href="#" onclick="return false;" class="bg-coffee-50 hover:bg-coffee-100 text-peach-500 font-bold py-2.5 text-center text-[11px] transition duration-150 flex items-center justify-center gap-1.5 active:bg-coffee-200">
+              <i class="fa-solid fa-arrow-pointer text-[10px] text-peach-400"></i> ${buttonLabel}
+            </a>
+          </div>
+          
+          <div class="text-[9px] text-white/50 text-right mt-0.5">下午 02:30</div>
+        </div>
+      `;
+    }
+
+    // 切換 Tab
+    function switchTab(tabName) {
+      currentTab = tabName;
+      renderCurrentTab();
+    }
+
+    // 複製當前 Tab 文字
+    function copyCurrentTab() {
+      const textToCopy = generatedData[currentTab];
+      if (!textToCopy) return;
+
+      copyTextToClipboard(textToCopy);
+      showToast("目前版本已成功複製到剪貼簿！");
+    }
+
+    // 複製所有版本文字
+    function copyAll() {
+      const allText = `【1. 簡短版】\n${generatedData.brief}\n\n-------------------------\n\n【2. 標準版】\n${generatedData.standard}\n\n-------------------------\n\n【3. FAQ 輔助版】\n${generatedData.faq}`;
+      copyTextToClipboard(allText);
+      showToast("全部三種版本已成功複製！");
+    }
+
+    // 複製核心函數（確保相容性）
+    function copyTextToClipboard(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).catch(() => {
+          fallbackCopyTextToClipboard(text);
+        });
+      } else {
+        fallbackCopyTextToClipboard(text);
+      }
+    }
+
+    function fallbackCopyTextToClipboard(text) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      textArea.style.position = "fixed";  // 避免滾動頁面
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+      } catch (err) {
+        console.error('複製失敗：', err);
+      }
+      document.body.removeChild(textArea);
+    }
+
+    // 展示精美 Toast 提示
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const toastText = document.getElementById('toastText');
+      toastText.textContent = message;
+      
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      toast.classList.add('opacity-100');
+      
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+        toast.classList.remove('opacity-100');
+      }, 2500);
+    }
+  </script>
+</body>
+</html>
